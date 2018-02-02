@@ -1,0 +1,48 @@
+#- name: Install epel release
+#  copy: src=file/epel.repo dest=/etc/yum.repos.d/epel_ansible.repo
+#  when: ansible_os_family == "RedHat"
+
+- name: Install epel release
+  yum:
+    name: epel-release
+    state: latest
+
+- name: install pip
+  yum:
+    name: python-pip
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: install GCC
+  yum:
+    name: gcc
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: install python-devel
+  yum:
+    name: python-devel
+    state: latest
+  when: ansible_os_family == "RedHat"
+
+- name: Upgrade pip
+  pip:
+    name: pip
+    extra_args: --upgrade
+  when: ansible_os_family == "RedHat"
+
+- name: Install python-swiftclient
+  pip:
+    name: python-swiftclient
+  when: ansible_os_family == "RedHat"
+
+- name: Install python-keystoneclient
+  pip:
+    name: python-keystoneclient
+  when: ansible_os_family == "RedHat"
+
+- name: Install duplicity
+  yum:
+    name: duplicity
+    state: latest
+  when: ansible_os_family == "RedHat" and file

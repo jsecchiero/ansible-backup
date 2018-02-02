@@ -1,0 +1,43 @@
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  UPDATE PACKAGE END INSTALL DEPENDENCIES                   |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+- name: update apt package cache
+  apt:
+    update_cache=yes
+  when: ansible_os_family == "Debian"
+
+- name: add duplicity ppa repo
+  apt_repository:
+    repo: 'ppa:duplicity-team/ppa'
+    validate_certs: no
+  when: ansible_os_family == "Debian"
+
+- name: update apt package cache
+  apt:
+    update_cache=yes
+  when: ansible_os_family == "Debian"
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|             I N S T A L L   O P E N S T A C K   C L I E N T                |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+- name: apt install python-swiftclient
+  apt:
+    name: python-swiftclient
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: apt install python-keystoneclient
+  apt:
+    name: python-keystoneclient
+    state: present
+  when: ansible_os_family == "Debian"
+- name: apt install duplicity
+  apt:
+    name: duplicity
+    state: latest
+  when: ansible_os_family == "Debian" and file

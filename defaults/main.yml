@@ -1,0 +1,55 @@
+---
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|              C U S T O M E R   B A S I C   V A R I A B L E S               |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+os_api: ""     #<api url> es https://api.it-mil1.entercloudsuite.com/v2.0"
+os_region: ""  #"region es it-mil1"
+os_project_id: ""    #tenant_id
+os_project: ""  #"tenant email"
+os_user: ""     #"tenant"
+os_password: ""     #"password"
+
+customer: "DEFAULT-override-this-Variable"
+
+#Max size sell to customer ES ( 322122547200 = 300Gib )
+Customer_MaxSize: 322122547200
+
+# HOSTNAME=""  #Manual Username
+# retention in Day
+full_every: 7D
+retention: 30D
+retentiondb: 30
+container_Database: Database
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  I n f l u x D B  V A R I A B L E S                        |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+influxDB_url: ""
+influxDB_port: ""
+influxDB_DatabaseName: ""
+influxDB_Username: ""
+influxDB_Password: ""
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  D u p l i c i t y   V A R I A B L E S                     |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+duplicity_download_path: "/usr/local/"
+backup_logpath: "/var/log/duplicity"
+dir_list: echo "/var/www"
+utility: FILES
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  S E R V E R   V A R I A B L E S                           |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+file: true
+mysql: true
+postgres: false

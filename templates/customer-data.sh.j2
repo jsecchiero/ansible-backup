@@ -1,0 +1,21 @@
+export OS_AUTH_URL="{{ os_api }}"
+export OS_REGION_NAME="{{ os_region }}"
+export OS_TENANT_ID="{{ os_project_id }}"
+export OS_TENANT_NAME="{{ os_project }}"
+export OS_USERNAME="{{ os_user }}"
+export OS_PASSWORD="{{ os_password }}"
+
+
+export SWIFT_USERNAME="{{ os_user }}"
+export SWIFT_TENANTNAME="{{ os_project }}"
+export SWIFT_PASSWORD="{{ os_password }}"
+export SWIFT_AUTHURL="{{ os_api }}"
+export SWIFT_AUTHVERSION=2
+export PASSPHRASE="{{ os_project_id }}"
+export SWIFT_REGION="{{ os_region }}"
+
+
+CUSTOMER="{{ customer }}" #Customers Name
+HOSTNAME=$(hostname | tr "\." "-")
+
+# HOSTNAME=""  #Set manual Hostname

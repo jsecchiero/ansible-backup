@@ -1,0 +1,29 @@
+#!/bin/bash
+## python-swiftclient python-keystoneclient mail-utility
+# Backup Databases
+
+
+source /usr/local/duplicity/customer-data.sh
+
+_CONTAINER="FILES"
+
+# Opzione per indicare una directory diversa per la temp e per la chache: --tempdir=/path/.duplicity/tmp --archive-dir=/new_path/.duplicity/cache
+# Opzione per visualizzare/ripristinare i file di, ad esempio 3 giorni fa: -t 3D
+
+
+## Comando per il list dei container, può  essere usato anche per vedere le subfolder nel container (swift list nome_container)
+#swift list 
+
+## Comando per il listing dei file sotto backup
+#duplicity list-current-files swift://${_CONTAINER}/subfolder-istanza/subfolder-path
+
+## Comando per il check dello status (full e incrementali)
+#duplicity collection-status swift://${_CONTAINER}/subfolder-istanza/subfolder-path
+
+## Comando per il ripristino dei file
+## Per ripristinare i file di 2 giorni fa andrà aggiunto `-t 2D` alle opzioni di duplicity
+#duplicity --file-to-restore path/public_html/ restore swift://${_CONTAINER}/subfolder-istanza/subfolder-path /restore
+
+# Comando per download da swift (db)
+#swift download ${_CONTAINER} subfolder/file
+
