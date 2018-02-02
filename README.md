@@ -94,15 +94,6 @@ Basic Playbook Example
       mysql: true
 ```
 
-
-## Example Playbook
-
-Run with default vars:
-
-    - hosts: all
-      roles:
-        - { role: ansible-backup }
-
 ## Testing
 
 Tests are performed using [Molecule](http://molecule.readthedocs.org/en/latest/).
