@@ -1,7 +1,7 @@
 Ansible Role: backup 
 ======================================
 
-[![Build Status](https://travis-ci.org/entercloudsuite/ansible-backup .svg?branch=master)](https://travis-ci.org/entercloudsuite/ansible-backup)
+[![Build Status](https://travis-ci.org/entercloudsuite/ansible-backup.svg?branch=master)](https://travis-ci.org/entercloudsuite/ansible-backup)
 [![Galaxy](https://img.shields.io/badge/galaxy-entercloudsuite.backup-blue.svg?style=flat-square)](https://galaxy.ansible.com/entercloudsuite/backup)  
 
 Installs backup on Ubuntu 16.04 (Xenial)
