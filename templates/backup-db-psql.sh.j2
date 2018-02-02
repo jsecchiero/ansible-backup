@@ -1,0 +1,94 @@
+#!/bin/bash
+## python-swiftclient python-keystoneclient mail-utility
+# Backup Databases
+
+
+source {{ duplicity_download_path }}duplicity/customer-data.sh
+
+START_TIME=`date +%s`
+
+#Retention in Day
+_CONTAINER="{{ container_Database }}"
+_RETENTION="{{ retentiondb }}"
+_DATE="$(date +%Y%m%d%H%M)"
+_RETENTION_DATE="$(date --date="${_RETENTION} days ago" +%Y%m%d)"
+_DIR="{{ duplicity_download_path }}duplicity/"
+_LOGPATH="{{ backup_logpath }}"
+_HOSTDB='127.0.0.1'
+_BACKUP_STAGINGPATH='{{ backup_stagingpath }}/postgres'
+
+_DATABASES=$(su - postgres -c "psql -ltA -F "," | cut -d "," -f1 | grep -vE '(template|postgres)'")
+MaxSize="{{ Customer_MaxSize }}"
+mkdir -p $_LOGPATH
+mkdir -p ${_BACKUP_STAGINGPATH}
+chown -R postgres:postgres ${_BACKUP_STAGINGPATH}
+
+for database in ${_DATABASES}
+do
+I=$[$I+1]
+
+_DUMP="dbdump_${database}.sql"
+_COSTANT="db_${database}"
+_NAME="${_COSTANT}${_DATE}"
+
+	su - postgres -c "pg_dump $database > ${_BACKUP_STAGINGPATH}/${_DUMP}"
+
+	if [[ "$?" == "0" ]]
+	then            
+                	echo "${_DATE} - DumpDB OK" >> ${_LOGPATH}/backup.log
+        	cd ${_BACKUP_STAGINGPATH}/
+       		mv ${_DUMP} ${_NAME}.sql
+        	gzip ${_NAME}.sql
+            		echo "${_DATE} - GZipped into file ${_NAME}.sql.gz" >> ${_LOGPATH}/backup.log
+        	rm -f ${_NAME}.sql
+                	echo "${_DATE} - Uploading dump ${_NAME}.sql.gz into container ${_CONTAINER}" >> ${_LOGPATH}/backup.log
+        	swift upload ${_CONTAINER} ${_NAME}.sql.gz --object-name ${HOSTNAME}/${_NAME}.sql.gz > /dev/null
+		
+        	if [[ "$?" == "0" ]]
+        	then    
+			S=$[$S+1]
+            		rm -f ${_NAME}.sql.gz
+        	else    
+			S=500
+            		echo "${_DATE} - UPLOAD $database FAIL!" >> ${_LOGPATH}/backup.log
+        	fi
+        		
+	else
+		S=500
+                echo "${_DATE} - Dump $database FAIL" >> ${_LOGPATH}/backup.log
+	        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
+        	curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+
+	fi
+
+done
+
+############################## Notifica influx db
+END_TIME=`date +%s`
+runtime=$((END_TIME - START_TIME))
+
+if [[ "$I" == "$S" ]]
+then
+        #status=1=OK
+        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+else
+        #status=2=FAIL
+        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+fi
+##############################
+
+
+
+
+for OldDump in $( swift list ${_CONTAINER}|grep ${_RETENTION_DATE})
+do
+	swift delete ${_CONTAINER} $OldDump
+	if [[ "$?" == "0" ]]
+        then
+		echo "${_DATE} - Dump: $OldDump deleted from Backup ${_CONTAINER}" >> ${_LOGPATH}/backup.log
+	else
+		echo "${_DATE} - Failed to delete dump: $OldDump from Backup ${_CONTAINER}" >> ${_LOGPATH}/backup.log
+	fi 
+done

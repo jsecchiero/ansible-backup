@@ -1,0 +1,21 @@
+---
+file:
+  /usr/local/duplicity/backup-db.sh:
+    exists: true
+    mode: "0700"
+    filetype: file
+  /usr/local/duplicity/backup.sh:
+    exists: true
+    mode: "0700"
+    filetype: file
+package:
+  cron:
+    installed: true
+  duplicity:
+    installed: true
+  logrotate:
+    installed: true
+  python-keystoneclient:
+    installed: true
+  python-swiftclient:
+    installed: true

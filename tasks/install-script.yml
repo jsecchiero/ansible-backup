@@ -1,0 +1,145 @@
+- name: esnure that cron is installed
+  apt: name=cron state=present
+
+- name: esnure that logrotate is installed
+  apt: name=logrotate state=present
+  
+- name: add any crontab jobs for duplicity
+  cron:
+    user: "root"
+    name: "duplicity"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup.sh"
+  when: file
+
+- name: add any crontab for mysql
+  cron:
+    user: "root"
+    name: "duplicity-db"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-db.sh"
+  when: mysql
+
+- name: add any crontab mongodb
+  cron:
+    user: "root"
+    name: "duplicity-mongodb"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+  when: mongodb
+
+- name: add any crontab for postgresql
+  cron:
+    user: "root"
+    name: "duplicity-db postges"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
+  when: postgres
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                    C O P Y   B A C K U P S C R I T P                       |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+- name: creates duplicity dir
+  file:
+    path: "{{ duplicity_download_path }}duplicity"
+    state: directory
+- name: add duplicity backup-file file scripts
+  template:
+    src: "templates/backup.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: file
+
+- name: add backup db script for mysql
+  template:
+    src: "templates/backup-db.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup-db.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: mysql
+
+- name: add backup db script for postgresql
+  template:
+    src: "templates/backup-db-psql.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: postgres
+
+- name: add backup db script for mongodb
+  template:
+    src="templates/backup-mongodb.sh.j2"
+    dest="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+    owner="root"
+    group="root"
+    mode="0700"
+  when: mongodb
+
+- name: add check script
+  template:
+    src: "templates/check.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/check.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: file
+
+- name: add customer data
+  template:
+    src: "templates/customer-data.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/customer-data.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+
+- name: Install log rotate configuration
+  template:
+<<<<<<< HEAD
+    src="files/logrotate-backup-ubuntu"
+    dest="/etc/logrotate.d/backup"
+    owner="root"
+    group="root"
+    mode="0700"
+=======
+    src: "files/logrotate-backup-ubuntu"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+>>>>>>> 5fbf6b9... fix syntax
+  when: ansible_os_family == "Debian"
+
+- name: Install log rotate configuration
+  template:
+<<<<<<< HEAD
+    src="files/logrotate-backup-centos"
+    dest="/etc/logrotate.d/backup"
+    owner="root"
+    group="root"
+    mode="0700"
+  when: ansible_os_family == "RedHat"
+
+=======
+    src: "files/logrotate-backup-centos"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: ansible_os_family == "RedHat"
+    
+>>>>>>> 5fbf6b9... fix syntax
