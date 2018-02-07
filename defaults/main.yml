@@ -50,6 +50,6 @@ utility: FILES
 #|                  S E R V E R   V A R I A B L E S                           |
 #|                                                                            |
 #+----------------------------------------------------------------------------+
-file: true
-mysql: true
+file: false
+mysql: false
 postgres: false
