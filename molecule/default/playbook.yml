@@ -2,5 +2,8 @@
 
 - name: run the main role
   hosts: all
+  vars:
+    file: true
+    mysql: true
   roles:
     - {role: ansible-backup}
