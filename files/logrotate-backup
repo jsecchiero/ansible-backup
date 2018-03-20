@@ -1,8 +1,0 @@
-{{ backup_logpath }}/backup.log {
-        create 600 nobody nobody
-        notifempty
-        daily
-        rotate 3
-        missingok
-        compress
-}
