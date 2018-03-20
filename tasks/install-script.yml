@@ -80,8 +80,19 @@
 
 - name: Install log rotate configuration
   template:
-    src="files/logrotate-backup"
+    src="files/logrotate-backup-ubuntu"
     dest="/etc/logrotate.d/backup"
     owner="root"
     group="root"
     mode="0700"
+    when: ansible_os_family == "Debian"
+
+- name: Install log rotate configuration
+  template:
+    src="files/logrotate-backup-centos"
+    dest="/etc/logrotate.d/backup"
+    owner="root"
+    group="root"
+    mode="0700"
+    when: ansible_os_family == "RedHat"
+    
