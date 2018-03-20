@@ -1,5 +1,5 @@
 {{ backup_logpath }}/backup.log {
-        create 600 nobody nobody
+        create 600 nobody nogroup
         notifempty
         daily
         rotate 3
