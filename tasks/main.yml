@@ -1,7 +1,11 @@
 ---
-- name: instal on debian system
+- name: instal on ubuntu system
   include: install-deb.yaml
-  when: ansible_os_family == "Debian"
+  when: ansible_distribution == 'Ubuntu'
+
+- name: instal on debian system
+  include: install-debian.yaml
+  when: ansible_distribution == 'Debian'
 
 - name: instal on RedHat system
   include: install-redhat.yaml

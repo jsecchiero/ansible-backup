@@ -1,0 +1,33 @@
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  UPDATE PACKAGE END INSTALL DEPENDENCIES                   |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+- name: update apt package cache
+  apt:
+    update_cache=yes
+
+- name: update apt package cache
+  apt:
+    update_cache=yes
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|             I N S T A L L   O P E N S T A C K   C L I E N T                |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+- name: apt install python-swiftclient
+  apt:
+    name: python-swiftclient
+    state: present
+
+- name: apt install python-keystoneclient
+  apt:
+    name: python-keystoneclient
+    state: present
+
+- name: apt install duplicity
+  apt:
+    name: duplicity
+    state: latest
