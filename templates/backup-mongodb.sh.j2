@@ -1,0 +1,97 @@
+#!/bin/bash
+## python-swiftclient python-keystoneclient mail-utility
+# Backup Databases
+
+
+source {{ duplicity_download_path }}duplicity/customer-data.sh
+
+START_TIME=`date +%s`
+
+#Retention in Day
+_CONTAINER="{{ container_mongoDB }}"
+_RETENTION="{{ retentiondb }}"
+_DATE="$(date +%Y%m%d%H%M)"
+_RETENTION_DATE="$(date --date="${_RETENTION} days ago" +%Y%m%d)"
+_DIR="{{ duplicity_download_path }}duplicity/"
+_LOGPATH="{{ backup_logpath }}"
+_HOSTDB='127.0.0.1'
+
+_USERDB="root"
+#_PASSDB="" #Manual Password
+echo _HOSTDB $_HOSTDB _USERDB $_USERDB _PASSDB $_PASSDB
+_DATABASES=$(mongo --quiet --eval  "db.adminCommand('listDatabases')" | grep "name" | awk -F ":" '{print $2}' | tr -d '\"' | tr -d ',' |  tr -d '\ ')
+MaxSize="{{ Customer_MaxSize }}"
+mkdir -p $_LOGPATH
+mkdir -p /var/backups/mongodb
+chown -R root:root /var/backups/mongodb
+
+for database in ${_DATABASES}; do
+
+	### BACKUP ###
+	log "Processing: ${database}"
+	mongodump --host "${_HOSTDB}" -d "${database}" --out "${_BACKUPDIR}" > "${_LOGFILE}" 2>&1
+	if [ $? -eq 0 ]; then
+
+		log "( ${database} ) Backup complete."
+	else
+		fail "( ${database} ) ERROR WHILE BACKING UP DATABASE ${database} (return code not 0)"
+                END_TIME=`date +%s`
+                runtime=$((END_TIME - START_TIME))
+                curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
+
+		
+	fi
+	### BACKUP ###
+
+	cd "${_BACKUPDIR}"
+	### BACKUP COMPRESSION AND UPLOAD ###
+	log "( ${database} ) Compressing the backup"
+	tar czvf "mongodb-${database}${_DATE}.tgz" "${database}" >> "${_LOGFILE}" 2>&1
+	if [ $? -eq 0 ]; then
+		log "( ${database} ) Archive created. Uploading to the object storage..."
+		swift --debug upload "${_CONTAINER}" -S 1073741824 "mongodb-${database}${_DATE}.tgz" >> "${_LOGFILE}" 2>&1
+		if [ $? -eq 0 ]; then
+			log "( ${database} ) Upload to the object storage completed."
+                        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
+                        END_TIME=`date +%s`
+                        runtime=$((END_TIME - START_TIME))
+                        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=1,elapsed=$runtime"
+
+		else
+                        END_TIME=`date +%s`
+                        runtime=$((END_TIME - START_TIME))
+                        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&u=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
+
+			fail "ERROR WHILE UPLOADING DATABASE ${database} TO THE OBJECT STORAGE (return code not 0)"
+		fi
+	else
+                END_TIME=`date +%s`
+                runtime=$((END_TIME - START_TIME))
+                curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&u=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
+
+		fail "( ${database} ) ERROR WHILE COMPRESSING DATABASE ${database} (return code not 0)"
+	fi
+	### END BACKUP COMPRESSION AND UPLOAD ###
+	
+	### CLEANUP ###
+	if [ ! -z "${_BACKUPDIR}/${database}" ]; then
+		rm -rf "${_BACKUPDIR}/${database}"
+   	fi
+    
+	if [ ! -z "${_BACKUPDIR}/mongodb-${database}${_DATE}.tgz" ]; then
+		rm "${_BACKUPDIR}/mongodb-${database}${_DATE}.tgz"
+	fi
+	### END CLEANUP ###
+
+done
+
+for oldump_objstorage in $( swift list "${_CONTAINER}" | grep "${_RETENTION_DATE}" )
+do
+	swift delete "${_CONTAINER}" "${oldump_objstorage}" >> "${_LOGFILE}" 2>&1
+	if [[ "$?" == "0" ]]
+        then
+		log "RETENTION - Dump: ${oldump_objstorage} deleted from object storage container ${_CONTAINER}"
+	else
+		fail "RETENTION FAILED - cannot remove dump: ${oldump_objstorage} from container ${_CONTAINER}"
+	fi 
+done
