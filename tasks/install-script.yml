@@ -14,7 +14,7 @@
     job="{{ duplicity_download_path }}duplicity/backup.sh"
   when: file
 
-- name: add any crontab
+- name: add any crontab mysql
   cron:
     user="root"
     name="duplicity-db"
