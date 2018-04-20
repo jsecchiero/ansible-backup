@@ -19,7 +19,7 @@ _HOSTDB='127.0.0.1'
 _USERDB="root"
 #_PASSDB="" #Manual Password
 echo _HOSTDB $_HOSTDB _USERDB $_USERDB _PASSDB $_PASSDB
-_DATABASES=$(mongo --quiet --eval  "db.adminCommand('listDatabases')" | grep "name" | awk -F ":" '{print $2}' | tr -d '\"' | tr -d ',' |  tr -d '\ ')
+_DATABASES=$(mongo -u {{mongodb_backupuser}} -p {{mongodb_password}} --authenticationDatabase admin --quiet --eval  "db.adminCommand('listDatabases')" | grep "name" | awk -F ":" '{print $2}' | tr -d '\"' | tr -d ',' |  tr -d '\ ')
 MaxSize="{{ Customer_MaxSize }}"
 mkdir -p $_LOGPATH
 mkdir -p /var/backups/mongodb
