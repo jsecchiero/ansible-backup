@@ -30,6 +30,8 @@ container_Database: Database
 #+----------------------------------------------------------------------------+
 
 container_mongoDB: MongoDB_Database
+mongodb_backupuser: root
+mongodb_password: veryS3cre3t
 
 #+----------------------------------------------------------------------------+
 #|                                                                            |

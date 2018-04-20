@@ -1,6 +1,6 @@
 ---
 - name: instal on ubuntu system
-  import_tasks: install-deb.yaml
+  import_tasks: install-ubuntu.yaml
   when: ansible_distribution == 'Ubuntu'
 
 - name: instal on debian system
