@@ -33,6 +33,8 @@ container_mongoDB: MongoDB_Database
 mongodb_backupuser: root
 mongodb_password: veryS3cre3t
 
+mongodb_nobackupdatabase: [admin, local]
+
 #+----------------------------------------------------------------------------+
 #|                                                                            |
 #|                  I n f l u x D B  V A R I A B L E S                        |

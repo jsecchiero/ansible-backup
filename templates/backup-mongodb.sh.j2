@@ -15,83 +15,100 @@ _RETENTION_DATE="$(date --date="${_RETENTION} days ago" +%Y%m%d)"
 _DIR="{{ duplicity_download_path }}duplicity/"
 _LOGPATH="{{ backup_logpath }}"
 _HOSTDB='127.0.0.1'
+_OPTIONS=""
 
 _USERDB="root"
-#_PASSDB="" #Manual Password
+_PASSDB="{{mongodb_password}}"
 echo _HOSTDB $_HOSTDB _USERDB $_USERDB _PASSDB $_PASSDB
-_DATABASES=$(mongo -u {{mongodb_backupuser}} -p {{mongodb_password}} --authenticationDatabase admin --quiet --eval  "db.adminCommand('listDatabases')" | grep "name" | awk -F ":" '{print $2}' | tr -d '\"' | tr -d ',' |  tr -d '\ ')
+#_PASSDB="" #Manual Password
+
+# "admin local"
+{% if mongodb_nobackupdatabase -%}
+NOBACKUP_DB="{% for item in mongodb_nobackupdatabase -%} {{item }} {% endfor %}"
+{% endif %}
+
+_DATABASES=$(mongo -u ${_USERDB} -p ${_PASSDB} --authenticationDatabase admin --quiet --eval  "db.adminCommand('listDatabases')" | grep "name" | awk -F ":" '{print $2}' | tr -d '\"' | tr -d ',' |  tr -d '\ ')
+
+# remove Database for no backup DB
+for WORDTOREMOVE in $NOBACKUP_DB
+do
+_DATABASES=${_DATABASES//$WORDTOREMOVE/}
+done
+
+
 MaxSize="{{ Customer_MaxSize }}"
 mkdir -p $_LOGPATH
 mkdir -p /var/backups/mongodb
 chown -R root:root /var/backups/mongodb
 
-for database in ${_DATABASES}; do
+for database in ${_DATABASES}
+do
+I=$[$I+1]
 
-	### BACKUP ###
-	log "Processing: ${database}"
-	mongodump --host "${_HOSTDB}" -d "${database}" --out "${_BACKUPDIR}" > "${_LOGFILE}" 2>&1
-	if [ $? -eq 0 ]; then
+_DUMP="dbdump_${database}"
+_COSTANT="db_${database}"
+_NAME="${_COSTANT}${_DATE}"
 
-		log "( ${database} ) Backup complete."
-	else
-		fail "( ${database} ) ERROR WHILE BACKING UP DATABASE ${database} (return code not 0)"
-                END_TIME=`date +%s`
-                runtime=$((END_TIME - START_TIME))
-                curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
+	mongodump -u ${_USERDB} -p ${_PASSDB} -d $database --out /var/backups/mongodb/${_DUMP}
 
+	if [[ "$?" == "0" ]]
+	then            
+                echo "${_DATE} - DumpDB OK" >> ${_LOGPATH}/backup.log
+        	cd /var/backups/mongodb
+       		mv ${_DUMP} mongodump_${_NAME}
+        	tar -cvzf mongodump_${_NAME}.tar.bz2 mongodump_${_NAME}
+            	echo "${_DATE} - Create tar.bz2 archive into file mongodump_${_NAME}.tar.bz2" >> ${_LOGPATH}/backup.log
 		
-	fi
-	### BACKUP ###
+        	swift upload ${_CONTAINER} mongodump_${_NAME}.tar.bz2 --object-name ${HOSTNAME}/mongodump_${_NAME}.tar.bz2 > /dev/null
+			echo "${_DATE} - Uploading dump mongodump_${_NAME}.tar.bz2 into container ${_CONTAINER}" >> ${_LOGPATH}/backup.log
+        	if [[ "$?" == "0" ]]
+        	then    
+			S=$[$S+1]
+            		rm -f mongodump_${_NAME}.tar.bz2
+			rm -rf mongodump_${_NAME}
 
-	cd "${_BACKUPDIR}"
-	### BACKUP COMPRESSION AND UPLOAD ###
-	log "( ${database} ) Compressing the backup"
-	tar czvf "mongodb-${database}${_DATE}.tgz" "${database}" >> "${_LOGFILE}" 2>&1
-	if [ $? -eq 0 ]; then
-		log "( ${database} ) Archive created. Uploading to the object storage..."
-		swift --debug upload "${_CONTAINER}" -S 1073741824 "mongodb-${database}${_DATE}.tgz" >> "${_LOGFILE}" 2>&1
-		if [ $? -eq 0 ]; then
-			log "( ${database} ) Upload to the object storage completed."
-                        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-                        END_TIME=`date +%s`
-                        runtime=$((END_TIME - START_TIME))
-                        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=1,elapsed=$runtime"
-
-		else
-                        END_TIME=`date +%s`
-                        runtime=$((END_TIME - START_TIME))
-                        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&u=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
-
-			fail "ERROR WHILE UPLOADING DATABASE ${database} TO THE OBJECT STORAGE (return code not 0)"
-		fi
+        	else    
+			S=500
+            		echo "${_DATE} - UPLOAD $database FAIL!" >> ${_LOGPATH}/backup.log
+        	fi
+        		
 	else
-                END_TIME=`date +%s`
-                runtime=$((END_TIME - START_TIME))
-                curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&u=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime"
+		S=500
+                echo "${_DATE} - Dump $database FAIL" >> ${_LOGPATH}/backup.log
+	        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
+        	curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-mongodb status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 
-		fail "( ${database} ) ERROR WHILE COMPRESSING DATABASE ${database} (return code not 0)"
 	fi
-	### END BACKUP COMPRESSION AND UPLOAD ###
-	
-	### CLEANUP ###
-	if [ ! -z "${_BACKUPDIR}/${database}" ]; then
-		rm -rf "${_BACKUPDIR}/${database}"
-   	fi
-    
-	if [ ! -z "${_BACKUPDIR}/mongodb-${database}${_DATE}.tgz" ]; then
-		rm "${_BACKUPDIR}/mongodb-${database}${_DATE}.tgz"
-	fi
-	### END CLEANUP ###
 
 done
 
-for oldump_objstorage in $( swift list "${_CONTAINER}" | grep "${_RETENTION_DATE}" )
+############################## Notifica influx db
+END_TIME=`date +%s`
+runtime=$((END_TIME - START_TIME))
+
+if [[ "$I" == "$S" ]]
+then
+        #status=1=OK
+        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
+        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-mongodb status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+else
+        #status=2=FAIL
+        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
+        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-mongodb status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+fi
+##############################
+
+
+
+
+for OldDump in $( swift list ${_CONTAINER}|grep ${_RETENTION_DATE})
 do
-	swift delete "${_CONTAINER}" "${oldump_objstorage}" >> "${_LOGFILE}" 2>&1
+	swift delete ${_CONTAINER} $OldDump
 	if [[ "$?" == "0" ]]
         then
-		log "RETENTION - Dump: ${oldump_objstorage} deleted from object storage container ${_CONTAINER}"
+		echo "${_DATE} - Dump: $OldDump deleted from Backup ${_CONTAINER}" >> ${_LOGPATH}/backup.log
 	else
-		fail "RETENTION FAILED - cannot remove dump: ${oldump_objstorage} from container ${_CONTAINER}"
+		echo "${_DATE} - Failed to delete dump: $OldDump from Backup ${_CONTAINER}" >> ${_LOGPATH}/backup.log
 	fi 
 done
+
