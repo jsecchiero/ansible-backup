@@ -56,7 +56,7 @@ _NAME="${_COSTANT}${_DATE}"
 		S=500
                 echo "${_DATE} - Dump $database FAIL" >> ${_LOGPATH}/backup.log
 	        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        	curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        	curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 
 	fi
 
@@ -70,11 +70,11 @@ if [[ "$I" == "$S" ]]
 then
         #status=1=OK
         SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 else
         #status=2=FAIL
         SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-db status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 fi
 ##############################
 
@@ -91,4 +91,3 @@ do
 		echo "${_DATE} - Failed to delete dump: $OldDump from Backup ${_CONTAINER}" >> ${_LOGPATH}/backup.log
 	fi 
 done
-
