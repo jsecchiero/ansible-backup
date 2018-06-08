@@ -82,27 +82,27 @@
 
 - name: add customer data
   template:
-    src="templates/customer-data.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/customer-data.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/customer-data.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/customer-data.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
 
 - name: Install log rotate configuration
   template:
-    src="files/logrotate-backup-ubuntu"
-    dest="/etc/logrotate.d/backup"
-    owner="root"
-    group="root"
-    mode="0700"
-    when: ansible_os_family == "Debian"
+    src: "files/logrotate-backup-ubuntu"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: ansible_os_family == "Debian"
 
 - name: Install log rotate configuration
   template:
-    src="files/logrotate-backup-centos"
-    dest="/etc/logrotate.d/backup"
-    owner="root"
-    group="root"
-    mode="0700"
-    when: ansible_os_family == "RedHat"
+    src: "files/logrotate-backup-centos"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: ansible_os_family == "RedHat"
     
