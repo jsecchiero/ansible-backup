@@ -14,7 +14,7 @@
     job="{{ duplicity_download_path }}duplicity/backup.sh"
   when: file
 
-- name: add any crontab
+- name: add any crontab for mysql
   cron:
     user="root"
     name="duplicity-db"
@@ -23,6 +23,16 @@
     weekday="*"
     job="{{ duplicity_download_path }}duplicity/backup-db.sh"
   when: mysql
+
+- name: add any crontab for postgresql
+  cron:
+    user="root"
+    name="duplicity-db postges"
+    hour="22"
+    minute="0"
+    weekday="*"
+    job="{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
+  when: postgres
 
 #+----------------------------------------------------------------------------+
 #|                                                                            |
