@@ -85,11 +85,11 @@ if [[ "$I" == "$S" ]]
 then
         #status=1=OK
 	SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 else
         #status=2=FAIL
 	SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 fi
 ##############################
 
@@ -157,11 +157,11 @@ if [[ "$I" == "$S" ]]
 then
         #status=1=OK
         SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 else
         #status=2=FAIL
         SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 fi
 ##############################
 
@@ -228,11 +228,11 @@ if [[ "$I" == "$S" ]]
 then
         #status=1=OK
         SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 else
         #status=2=FAIL
         SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://influxdb.enter.it:8087/write?db=ecs&u=backup&p=4NWRxgvkFP" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
 fi
 ##############################
 
@@ -241,4 +241,3 @@ END_TIME=`date +%s`
 
 
 echo "${END_TIME} - BACKUP Dir ${_DIR} container: FILES/$HOSTNAME/$path Status END in $runtime" >> ${_LOGPATH}/backup.log
-
