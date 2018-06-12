@@ -6,32 +6,32 @@
   
 - name: add any crontab jobs for duplicity
   cron:
-    user="root"
-    name="duplicity"
-    hour="22"
-    minute="0"
-    weekday="*"
-    job="{{ duplicity_download_path }}duplicity/backup.sh"
+    user: "root"
+    name: "duplicity"
+    hour: "22"
+    minute: "0"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup.sh"
   when: file
 
 - name: add any crontab for mysql
   cron:
-    user="root"
-    name="duplicity-db"
-    hour="22"
-    minute="0"
-    weekday="*"
-    job="{{ duplicity_download_path }}duplicity/backup-db.sh"
+    user: "root"
+    name: "duplicity-db"
+    hour: "22"
+    minute: "0"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-db.sh"
   when: mysql
 
 - name: add any crontab for postgresql
   cron:
-    user="root"
-    name="duplicity-db postges"
-    hour="22"
-    minute="0"
-    weekday="*"
-    job="{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
+    user: "root"
+    name: "duplicity-db postges"
+    hour: "22"
+    minute: "0"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
   when: postgres
 
 #+----------------------------------------------------------------------------+
@@ -42,42 +42,42 @@
 
 - name: creates duplicity dir
   file:
-    path="{{ duplicity_download_path }}duplicity"
-    state=directory
+    path: "{{ duplicity_download_path }}duplicity"
+    state: directory
 - name: add duplicity backup-file file scripts
   template:
-    src="templates/backup.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/backup.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/backup.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
   when: file
 
 - name: add backup db script for mysql
   template:
-    src="templates/backup-db.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/backup-db.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/backup-db.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup-db.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
   when: mysql
 
 - name: add backup db script for postgresql
   template:
-    src="templates/backup-db-psql.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/backup-db-psql.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
   when: postgres
 
 - name: add check script
   template:
-    src="templates/check.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/check.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/check.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/check.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
   when: file
 
 - name: add customer data
