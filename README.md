@@ -40,7 +40,7 @@ Install and configure Duplicity to work with Openstack Swift backend.
 |influxDB_DatabaseName|Influx DB Database Name | Mydatabase|
 |influxDB_Username|InfluxDB Username | Myusername|
 |influxDB_Password|InflxuDB username password| Mypassword|
-|Max size|Max Space sell to customer|Default 322122547200 (300 Gib)|
+|Customer_MaxSize|Max Space sell to customer|Default 322122547200 (300 Gib)|
 ## Server Variables
 |Variable Name|Descriprion|Default|
 | ------ | ------ | ------  |
