@@ -15,12 +15,13 @@ _RETENTION_DATE="$(date --date="${_RETENTION} days ago" +%Y%m%d)"
 _DIR="{{ duplicity_download_path }}duplicity/"
 _LOGPATH="{{ backup_logpath }}"
 _HOSTDB='127.0.0.1'
+_BACKUP_STAGINGPATH='{{ backup_stagingpath }}/postgres'
 
 _DATABASES=$(su - postgres -c "psql -ltA -F "," | cut -d "," -f1 | grep -vE '(template|postgres)'")
 MaxSize="{{ Customer_MaxSize }}"
 mkdir -p $_LOGPATH
-mkdir -p /var/backups/postgres
-chown -R postgres:postgres /var/backups/postgres
+mkdir -p ${_BACKUP_STAGINGPATH}
+chown -R postgres:postgres ${_BACKUP_STAGINGPATH}
 
 for database in ${_DATABASES}
 do
@@ -30,12 +31,12 @@ _DUMP="dbdump_${database}.sql"
 _COSTANT="db_${database}"
 _NAME="${_COSTANT}${_DATE}"
 
-	su - postgres -c "pg_dump $database > /var/backups/postgres/${_DUMP}"
+	su - postgres -c "pg_dump $database > ${_BACKUP_STAGINGPATH}/${_DUMP}"
 
 	if [[ "$?" == "0" ]]
 	then            
                 	echo "${_DATE} - DumpDB OK" >> ${_LOGPATH}/backup.log
-        	cd /var/backups/postgres/
+        	cd ${_BACKUP_STAGINGPATH}/
        		mv ${_DUMP} ${_NAME}.sql
         	gzip ${_NAME}.sql
             		echo "${_DATE} - GZipped into file ${_NAME}.sql.gz" >> ${_LOGPATH}/backup.log

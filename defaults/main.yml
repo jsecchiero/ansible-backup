@@ -55,6 +55,7 @@ influxDB_Password: ""
 
 duplicity_download_path: "/usr/local/"
 backup_logpath: "/var/log/duplicity"
+backup_stagingpath: "/var/backup"
 dir_list: echo "/var/www"
 utility: FILES
 #+----------------------------------------------------------------------------+

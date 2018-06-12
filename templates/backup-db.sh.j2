@@ -15,6 +15,7 @@ _RETENTION_DATE="$(date --date="${_RETENTION} days ago" +%Y%m%d)"
 _DIR="{{ duplicity_download_path }}duplicity/"
 _LOGPATH="{{ backup_logpath }}"
 _HOSTDB='127.0.0.1'
+_BACKUP_STAGINGPATH='{{ backup_stagingpath }}/mysql'
 
 _USERDB="root"
 #_PASSDB="" #Manual Password
@@ -23,8 +24,8 @@ _DATABASES=$(mysql -u ${_USERDB} -e "show databases;" | grep -v "Database" | gre
 _OPTIONS="--opt"
 MaxSize="{{ Customer_MaxSize }}"
 mkdir -p $_LOGPATH
-mkdir -p /var/backups/mysql
-chown -R root:root /var/backups/mysql
+mkdir -p ${_BACKUP_STAGINGPATH}
+chown -R root:root ${_BACKUP_STAGINGPATH}
 
 for database in ${_DATABASES}
 do
@@ -34,12 +35,12 @@ _DUMP="dbdump_${database}.sql"
 _COSTANT="db_${database}"
 _NAME="${_COSTANT}${_DATE}"
 
-	mysqldump -u ${_USERDB} ${_OPTIONS} $database > /var/backups/mysql/${_DUMP}
+	mysqldump -u ${_USERDB} ${_OPTIONS} $database > ${_BACKUP_STAGINGPATH}/${_DUMP}
 
 	if [[ "$?" == "0" ]]
 	then            
                 	echo "${_DATE} - DumpDB OK" >> ${_LOGPATH}/backup.log
-        	cd /var/backups/mysql/
+        	cd ${_BACKUP_STAGINGPATH}/
        		mv ${_DUMP} ${_NAME}.sql
         	gzip ${_NAME}.sql
             		echo "${_DATE} - GZipped into file ${_NAME}.sql.gz" >> ${_LOGPATH}/backup.log

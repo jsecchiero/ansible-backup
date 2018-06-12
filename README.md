@@ -62,6 +62,7 @@ Install and configure Duplicity to work with Openstack Swift backend.
 |Variable Name|Description|Default|
 | ------ | ------ | ------  |
 |dir_list |list backup path|echo "/var/www" |
+|backup_stagingpath | temp directory before upload| "/var/backup/"|
 
 ### More example
 
