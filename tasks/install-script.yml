@@ -24,6 +24,16 @@
     job: "{{ duplicity_download_path }}duplicity/backup-db.sh"
   when: mysql
 
+- name: add any crontab mongodb
+  cron:
+    user="root"
+    name="duplicity-mongodb"
+    hour="22"
+    minute="0"
+    weekday="*"
+    job="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+  when: mongodb
+
 - name: add any crontab for postgresql
   cron:
     user: "root"
@@ -44,6 +54,7 @@
   file:
     path: "{{ duplicity_download_path }}duplicity"
     state: directory
+
 - name: add duplicity backup-file file scripts
   template:
     src: "templates/backup.sh.j2"
@@ -70,6 +81,15 @@
     group: "root"
     mode: "0700"
   when: postgres
+
+- name: add backup db script for mongodb
+  template:
+    src="templates/backup-mongodb.sh.j2"
+    dest="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+    owner="root"
+    group="root"
+    mode="0700"
+  when: mongodb
 
 - name: add check script
   template:
@@ -105,4 +125,3 @@
     group: "root"
     mode: "0700"
   when: ansible_os_family == "RedHat"
-    

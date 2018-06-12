@@ -25,6 +25,18 @@ container_Database: Database
 
 #+----------------------------------------------------------------------------+
 #|                                                                            |
+#|                    M o n g o D B  V A R I A B L E S                        |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+
+container_mongoDB: MongoDB_Database
+mongodb_backupuser: root
+mongodb_password: veryS3cre3t
+
+mongodb_nobackupdatabase: [admin, local]
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
 #|                  I n f l u x D B  V A R I A B L E S                        |
 #|                                                                            |
 #+----------------------------------------------------------------------------+
@@ -53,3 +65,4 @@ utility: FILES
 file: false
 mysql: false
 postgres: false
+mongodb: false

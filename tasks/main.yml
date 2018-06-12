@@ -1,10 +1,14 @@
 ---
+- name: instal on ubuntu system
+  import_tasks: install-ubuntu.yaml
+  when: ansible_distribution == 'Ubuntu'
+
 - name: instal on debian system
-  include: install-deb.yaml
-  when: ansible_os_family == "Debian"
+  import_tasks: install-debian.yaml
+  when: ansible_distribution == 'Debian'
 
 - name: instal on RedHat system
-  include: install-redhat.yaml
+  import_tasks: install-redhat.yaml
   when: ansible_os_family == "RedHat"
 - name: instal scripts
   include: install-script.yml
