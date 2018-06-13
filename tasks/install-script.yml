@@ -8,8 +8,8 @@
   cron:
     user: "root"
     name: "duplicity"
-    hour: "22"
-    minute: "0"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
     weekday: "*"
     job: "{{ duplicity_download_path }}duplicity/backup.sh"
   when: file
@@ -18,8 +18,8 @@
   cron:
     user: "root"
     name: "duplicity-db"
-    hour: "22"
-    minute: "0"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
     weekday: "*"
     job: "{{ duplicity_download_path }}duplicity/backup-db.sh"
   when: mysql
@@ -28,8 +28,8 @@
   cron:
     user="root"
     name="duplicity-mongodb"
-    hour="22"
-    minute="0"
+    hour="{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
     weekday="*"
     job="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
   when: mongodb
@@ -38,8 +38,8 @@
   cron:
     user: "root"
     name: "duplicity-db postges"
-    hour: "22"
-    minute: "0"
+    hour: "{{ backup_schedule_hour }}"
+    minute: "{{ backup_schedule_minute }}"
     weekday: "*"
     job: "{{ duplicity_download_path }}duplicity/backup-db-psql.sh"
   when: postgres
