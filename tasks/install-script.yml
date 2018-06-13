@@ -26,12 +26,12 @@
 
 - name: add any crontab mongodb
   cron:
-    user="root"
-    name="duplicity-mongodb"
-    hour="{{ backup_schedule_hour }}"
+    user: "root"
+    name: "duplicity-mongodb"
+    hour: "{{ backup_schedule_hour }}"
     minute: "{{ backup_schedule_minute }}"
-    weekday="*"
-    job="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
   when: mongodb
 
 - name: add any crontab for postgresql
