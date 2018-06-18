@@ -54,6 +54,7 @@
   file:
     path: "{{ duplicity_download_path }}duplicity"
     state: directory
+
 - name: add duplicity backup-file file scripts
   template:
     src: "templates/backup.sh.j2"
@@ -83,11 +84,11 @@
 
 - name: add backup db script for mongodb
   template:
-    src="templates/backup-mongodb.sh.j2"
-    dest="{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
-    owner="root"
-    group="root"
-    mode="0700"
+    src: "templates/backup-mongodb.sh.j2"
+    dest: "{{ duplicity_download_path }}duplicity/backup-mongodb.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
   when: mongodb
 
 - name: add check script
@@ -109,37 +110,18 @@
 
 - name: Install log rotate configuration
   template:
-<<<<<<< HEAD
-    src="files/logrotate-backup-ubuntu"
-    dest="/etc/logrotate.d/backup"
-    owner="root"
-    group="root"
-    mode="0700"
-=======
     src: "files/logrotate-backup-ubuntu"
     dest: "/etc/logrotate.d/backup"
     owner: "root"
     group: "root"
     mode: "0700"
->>>>>>> 5fbf6b9... fix syntax
   when: ansible_os_family == "Debian"
 
 - name: Install log rotate configuration
   template:
-<<<<<<< HEAD
-    src="files/logrotate-backup-centos"
-    dest="/etc/logrotate.d/backup"
-    owner="root"
-    group="root"
-    mode="0700"
-  when: ansible_os_family == "RedHat"
-
-=======
     src: "files/logrotate-backup-centos"
     dest: "/etc/logrotate.d/backup"
     owner: "root"
     group: "root"
     mode: "0700"
   when: ansible_os_family == "RedHat"
-    
->>>>>>> 5fbf6b9... fix syntax
