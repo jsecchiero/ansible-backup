@@ -1,243 +1,77 @@
-#!/bin/bash
-# python-swiftclient python-keystoneclient duplicity mail-utility
-START_TIME=`date +%s`
+#!/usr/bin/env bash
 
-source {{ duplicity_download_path }}duplicity/customer-data.sh
-
-
-UTILITY="{{ utility }}" #"Prefisso nome container"
-#log path
-_LOGPATH="{{ backup_logpath }}"
-mkdir -p ${_LOGPATH}
-
-# Dove sono collocati gli script di backup/?"
-_SCRIPTDIR="{{ duplicity_download_path }}duplicity" 
-# Ogni quanto viene fatto un full
-_FULL_EVERY="{{ full_every }}"
-# per quanto tempo tenere i dati
-_RETENTION="{{ retention }}"
-MaxSize="{{ Customer_MaxSize }}"
-DIR_LIST=$( {{ dir_list }} )
+## Dipendenze:
+## 1) restic
+## 2) jq
+## Opzionale: fusermount (pkg: fuse su CentOS e Ubuntu). Richiesto solo per `restic mount`.
 
 
-RETRY=""
-RETRY2=""
+export RESTIC_REPOSITORY="{{restic_repository}}"
+source /usr/local/restic/customer-data.sh
 
-S=0 #contatore upload ok  
-I=0 #contatore ciclo for
+## Per favore NON MODIFICATE la variabile RESTIC_PASSWORD.
+## Viceversa i backup non saranno ripristinabili. 
 
-#Start Backup
-for _DIR in $DIR_LIST
-do
+export RESTIC_PASSWORD="{{restic_repository_password}}"
 
-I=$[$I+1] 
+export OS_ENDPOINT_TYPE=publicURL
+export OS_INTERFACE=public
+export OS_IDENTITY_API_VERSION=2
 
-_DATE="$(date +%Y%m%d%H%M)"
-path=$(echo $_DIR | tr "/" " " | awk '{print $NF}')
+## L'init va dato SOLO la prima volta. Se il repo su
+## Swift esiste già, restituisce comunque errore.
+#/usr/local/bin/restic init
+
+## Esegue il backup dei database.
+
+START=$(date "+%s")
+TIMESTAMP=$(date --iso | tr -d -)
+BACKUPPATH="{{restic_backup_path}}"
+RESTIC_BACKUP_LOG_PATH="{{backup_logpath}}"
+mkdir -p "{{restic_backup_path}}"
+mkdir -p "{{backup_logpath}}"
+chown -R root:root  "{{restic_backup_path}}"
 
 
-echo "${_DATE} - BACKUP Dir ${_DIR} container: $UTILITY/$HOSTNAME/$path Status START" >> ${_LOGPATH}/backup.log
+function prepare_bk {
+  {{restic_backup_script}}
+}
 
-
-# DEBUG LINE
-#echo _DIR $_DIR _CONTAINER $_CONTAINER _SCRIPTDIR $_SCRIPTDIR
-
-#Exec Backup
-duplicity --no-encryption --full-if-older-than $_FULL_EVERY --volsize=1024 ${_DIR} swift://$UTILITY/$HOSTNAME/$path  >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca il backup
-if [[ "$?" == "0" ]]
+if prepare_bk; 
 then
+    if "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}"  > $RESTIC_BACKUP_LOG_PATH/backup.log; 
+    then
+        END=$(/usr/local/bin/restic snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
 
-	echo "OK :-: ${_DATE} :-: UPLOAD OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-	S=$[$S+1]  
+        RUNTIME=$(( ${END} - ${START} ))
+
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
+	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
+
+    else
+        # Invia notifica se fallisce l'upload su swift.
+        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
+	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
+    fi
 
 else
-	RETRY=$(echo $RETRY $_DIR)
-	echo "CRIT :-: ${_DATE} :-: UPLOAD FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-	S=500
-fi
+    "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}"  > $RESTIC_BACKUP_LOG_PATH/backup.log; 
+    END=$("{{restic_binary_path}}/restic" snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
 
-#Remove Old Backup
-duplicity remove-older-than $_RETENTION --force swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca la rimozione dei vecchi backup
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: REMOVE OLD BACKUP OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: REMOVE OLD BACKUP FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
-# Log Backup Status
-duplicity collection-status swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: CHECK COLLECTION STATUS OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: CHECK COLLECTION STATUS FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
+    RUNTIME=$(( ${END} - ${START} ))
 
-done
-
-############################## Notifica influx db
-END_TIME=`date +%s`
-runtime=$((END_TIME - START_TIME))
-
-if [[ "$I" == "$S" ]]
-then
-        #status=1=OK
-	SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-else
-        #status=2=FAIL
-	SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-fi
-##############################
-
-
-echo List Domain fail $RETRY >> ${_LOGPATH}/backup.log
-
-S=0 #contatore upload ok  
-I=0 #contatore ciclo for
-
-
-
-for _DIR in $RETRY
-do
-
-I=$[$I+1] 
-
-_DATE="$(date +%Y%m%d%H%M)"
-path=$(echo $_DIR | tr "/" " " | awk '{print $NF}')
-
-
-echo "${_DATE} - BACKUP Dir ${_DIR} container: $UTILITY/$HOSTNAME/$path Status START" >> ${_LOGPATH}/backup.log
-
-
-# DEBUG LINE
-#echo _DIR $_DIR _CONTAINER $_CONTAINER _SCRIPTDIR $_SCRIPTDIR
-
-#Exec Backuo
-duplicity --no-encryption --full-if-older-than $_FULL_EVERY --volsize=1024 ${_DIR} swift://$UTILITY/$HOSTNAME/$path  >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca il backup
-if [[ "$?" == "0" ]]
-then
-        S=$[$S+1] 
-	echo "OK :-: ${_DATE} :-: UPLOAD OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-
-else
-	S=500
-	RETRY2=$(echo $RETRY $_DIR)
-	echo "CRIT :-: ${_DATE} :-: UPLOAD FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
-#Remove Old Backup
-duplicity remove-older-than $_RETENTION --force swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca la rimozione dei vecchi backup
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: REMOVE OLD BACKUP OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: REMOVE OLD BACKUP FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
-# Log Backup Status
-duplicity collection-status swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: CHECK COLLECTION STATUS OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: CHECK COLLECTION STATUS FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
-
-done
-
-############################## Notifica influx db
-END_TIME=`date +%s`
-runtime=$((END_TIME - START_TIME))
-
-if [[ "$I" == "$S" ]]
-then
-        #status=1=OK
-        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-else
-        #status=2=FAIL
-        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-fi
-##############################
-
-echo List Domain fail $RETRY2 >> ${_LOGPATH}/backup.log
-
-S=0 #contatore upload ok
-I=0 #contatore ciclo for
-
-
-for _DIR in $RETRY2
-do
-
-I=$[$I+1]
-
-_DATE="$(date +%Y%m%d%H%M)"
-path=$(echo $_DIR | tr "/" " " | awk '{print $NF}')
-
-
-echo "${_DATE} - BACKUP Dir ${_DIR} container: $UTILITY/$HOSTNAME/$path Status START" >> ${_LOGPATH}/backup.log
-
-
-# DEBUG LINE
-#echo _DIR $_DIR _CONTAINER $_CONTAINER _SCRIPTDIR $_SCRIPTDIR
-
-#Exec Backup
-duplicity --no-encryption --full-if-older-than $_FULL_EVERY --volsize=1024 ${_DIR} swift://$UTILITY/$HOSTNAME/$path  >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca il backup
-if [[ "$?" == "0" ]]
-then
-	S=$[$S+1]
-	echo "OK :-: ${_DATE} :-: UPLOAD OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-
-else
-	RETRY2=$(echo $RETRY $_DIR)
-	echo "CRIT :-: ${_DATE} :-: UPLOAD FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-	S=500
+    # Invia notifica se fallisce anche un solo dump.
+    curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
+	  "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
 
 fi
-#Remove Old Backup
-duplicity remove-older-than $_RETENTION --force swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-# Controlla Non fallisca la rimozione dei vecchi backup
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: REMOVE OLD BACKUP OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: REMOVE OLD BACKUP FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
-# Log Backup Status
-duplicity collection-status swift://$UTILITY/$HOSTNAME/$path >> ${_LOGPATH}/backup.log 2>&1
-if [[ "$?" == "0" ]]
-then
-	echo "OK :-: ${_DATE} :-: CHECK COLLECTION STATUS OK! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-else
-	echo "WARN :-: ${_DATE} :-: CHECK COLLECTION STATUS FAIL! :-: EXITSTATUS :-: $HOSTNAME "_" $path" >> ${_LOGPATH}/backup.log
-fi
 
-done
+## Elenca i backup eseguiti.
+#restic -r swift:${_CONTAINER}:/home snapshots
 
-############################## Notifica influx db
-END_TIME=`date +%s`
-runtime=$((END_TIME - START_TIME))
-
-if [[ "$I" == "$S" ]]
-then
-        #status=1=OK
-        SWIFT_DATA=$(swift stat | grep Bytes: | awk -F ":" '{print $2}' | sed 's/ //g')
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=1,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-else
-        #status=2=FAIL
-        SWIFT_DATA=0       #così viene inviata la notifica anche se l'autenticazione fallisce.
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=backup-data status=2,elapsed=$runtime,size=$SWIFT_DATA,MaxSize=$MaxSize"
-fi
-##############################
-
-#Log elapsed time
-END_TIME=`date +%s`
-
-
-echo "${END_TIME} - BACKUP Dir ${_DIR} container: FILES/$HOSTNAME/$path Status END in $runtime" >> ${_LOGPATH}/backup.log
+## Effettua un restore partendo dall'ultima snapshot.
+## Per backup precedenti, indicare l'id della snapshot al posto di `latest`
+## (vedi comando precedente). Altre opzioni:
+## --target: directory di destinazione
+## --include: specifica quale directory ripristinare
+#restic -r swift:${_CONTAINER}:/home restore latest --target /restore

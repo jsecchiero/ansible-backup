@@ -1,14 +1,32 @@
 ---
-- name: instal on ubuntu system
-  import_tasks: install-ubuntu.yaml
-  when: ansible_distribution == 'Ubuntu'
 
-- name: instal on debian system
-  import_tasks: install-debian.yaml
-  when: ansible_distribution == 'Debian'
+- block:
+    - name: instal on ubuntu system
+      import_tasks: install-ubuntu.yaml
+      when: ansible_distribution == 'Ubuntu'
+    
+    - name: instal on debian system
+      import_tasks: install-debian.yaml
+      when: ansible_distribution == 'Debian'
+    
+    - name: instal on RedHat system
+      import_tasks: install-redhat.yaml
+      when: ansible_os_family == "RedHat"
+    - name: instal scripts
+      include: install-script.yml
+    - name: instal scripts
+      include: install-script.yml
+  when: duplicity
 
-- name: instal on RedHat system
-  import_tasks: install-redhat.yaml
-  when: ansible_os_family == "RedHat"
-- name: instal scripts
-  include: install-script.yml
+- block:
+
+    - name: dbug
+      debug:
+        var: restic_cron
+
+    - name: instal Restic
+      import_tasks: install-restic.yaml
+    
+    - name: instal scripts
+      include: install-restic-script.yml
+  when: restic

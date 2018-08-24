@@ -4,12 +4,12 @@
 #|              C U S T O M E R   B A S I C   V A R I A B L E S               |
 #|                                                                            |
 #+----------------------------------------------------------------------------+
-os_api: ""     #<api url> es https://api.it-mil1.entercloudsuite.com/v2.0"
-os_region: ""  #"region es it-mil1"
-os_project_id: ""    #tenant_id
-os_project: ""  #"tenant email"
-os_user: ""     #"tenant"
-os_password: ""     #"password"
+#os_api: ""     #<api url> es https://api.it-mil1.entercloudsuite.com/v2.0"
+#os_region: ""  #"region es it-mil1"
+#os_project_id: ""    #tenant_id
+#os_project: ""  #"tenant email"
+#os_user: ""     #"tenant"
+#os_password: ""     #"password"
 
 customer: "DEFAULT-override-this-Variable"
 
@@ -54,12 +54,77 @@ influxDB_Password: ""
 #|                  D u p l i c i t y   V A R I A B L E S                     |
 #|                                                                            |
 #+----------------------------------------------------------------------------+
-
+duplicity: false
 duplicity_download_path: "/usr/local/"
 backup_logpath: "/var/log/duplicity"
 backup_stagingpath: "/var/backup"
 dir_list: echo "/var/www"
 utility: FILES
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                     R e s t i c   V A R I A B L E S                        |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+restic: true
+restic_setup_repository: true
+restic_version: 0.9.1
+restic_url_install: "https://github.com/restic/restic/releases/download/v{{restic_version}}/restic_{{restic_version}}_linux_amd64.bz2"
+restic_download_path: "/opt/restic"
+restic_binary_path: "/usr/local/bin"
+restic_install_path: "/usr/local/"
+backup_logpath: "/var/log/backup"
+restic_backup_path: "/var/backups/resitc{{restic_service_to_backup}}"
+# UPPERCASE is not necessary but decide rule and keep it standard ;)
+restic_service_to_backup: FILES # MYSQL MONGO
+restic_repository: "swift:{{restic_service_to_backup}}:/$HOSTNAME"
+restic_repository_password: "verys3cr3t"
+restic_cron:
+  basic_rules:
+    user: "root"
+    name: "backup"
+    hour: "*"
+    minute: "*"
+    hour: "23"
+    day: "*"
+    month: "*"
+    weekday: "*"
+    job: "{{ duplicity_download_path }}restic/backup.sh"
+restic_additional_pakage_nead:
+  - ntp
+
+
+# backup for mysql multidatabase
+#restic_backup_script: |
+#  _DATABASES=$(mysql -e "SHOW DATABASES;" | grep -vE "(Database|mysql|performance_schema|information_schema|sys)")
+#  _OPTIONS="--opt"
+#  
+#  # Inizializza un array vuoto. Per ogni dump verrà aggiunto 0 se riuscito o 1 se fallito.
+#  # Questo serve per inviare la notifica a Grafana anche con un solo dump non riuscito.
+#  # L'upload degli altri dump viene comunque effettuato.
+#  
+#  declare -a _STATUS
+#  
+#  for _DB in ${_DATABASES}; do
+#      echo "${TIMESTAMP} Begin dump for ${_DB}" >> $RESTIC_BACKUP_LOG_PATH/backup.log
+#      if mysqldump "${_OPTIONS}" ${_DB} > /var/backups/mysql/"${TIMESTAMP}"_"${_DB}".sql 2> $RESTIC_BACKUP_LOG_PATH/backup.err; then
+#          echo "${TIMESTAMP} End dump for ${_DB}" >> $RESTIC_BACKUP_LOG_PATH/backup.log
+#          _STATUS+=('0')
+#      else
+#          echo "${TIMESTAMP} Dump for ${_DB} failed!" >> $RESTIC_BACKUP_LOG_PATH/backup.log
+#          _STATUS+=('1')
+#      fi
+#  done
+#  
+#  for _EXIT_STATUS in "${_STATUS[@]}"; do
+#      if [ "${_EXIT_STATUS}" == 1 ]; then
+#          return 1
+#      else
+#          return 0
+#      fi
+#  done
+#
+
 #+----------------------------------------------------------------------------+
 #|                                                                            |
 #|                  S E R V E R   V A R I A B L E S                           |

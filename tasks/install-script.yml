@@ -100,6 +100,10 @@
     mode: "0700"
   when: file
 
+- name: Debug prima di customer data
+  debug:
+    msg: "{{os_api}}"
+
 - name: add customer data
   template:
     src: "templates/customer-data.sh.j2"

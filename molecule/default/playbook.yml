@@ -1,15 +1,26 @@
 ---
-- name: run the main role
-  hosts: all
-  vars:
-    file: true
-    mysql: true
-  roles:
-    - {role: ansible-backup}
 
-- name: install backup in mongoDB
-  hosts: mongodb
-  vars:
-    mongodb: true
+- name: Create
+  hosts: all
+  connection: local
+  gather_facts: false
+  #os_api: ""     #<api url> es https://api.it-mil1.entercloudsuite.com/v2.0"
+  #os_region: ""  #"region es it-mil1"
+  #os_project_id: ""    #tenant_id
+  #os_project: ""  #"tenant email"
+  #os_user: ""     #"tenant"
+  #os_password: ""     #"password"
+  tasks:
+    - set_fact:
+        os_api: "{{ lookup('env', 'OS_AUTH_URL') }}"
+        os_region: "{{ lookup('env', 'OS_REGION_NAME') }}"
+        os_project_id: "{{ lookup('env', 'OS_TENANT_ID') }}"
+        os_project: "{{ lookup('env', 'OS_TENANT_NAME') }}"
+        os_user: "{{ lookup('env', 'OS_USERNAME') }}"
+        os_password: "{{ lookup('env', 'OS_PASSWORD') }}"
+    - debug:
+        msg: "{{os_api}}"
+- name: run global  
+  hosts: all
   roles:
     - {role: ansible-backup}
