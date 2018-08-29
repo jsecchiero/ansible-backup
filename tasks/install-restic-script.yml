@@ -19,7 +19,7 @@
   - name: esnure that logrotate is installed
     apt: name=logrotate state=present
   
-  - name: add crontab for "{{restic_service_to_backup}}"
+  - name: add crontab for "{{utility}}"
     cron:
       user: "{{item.value.user}}"
       name: "{{item.value.name}}"
@@ -125,7 +125,7 @@
 - name: add restic backup-file file scripts
   template:
     src: "templates/backup.sh.j2"
-    dest: "{{ duplicity_download_path }}restic/{{restic_service_to_backup | lower}}_backup.sh"
+    dest: "{{ duplicity_download_path }}restic/{{utility | lower}}_backup.sh"
     owner: "root"
     group: "root"
     mode: "0700"

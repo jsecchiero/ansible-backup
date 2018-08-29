@@ -27,8 +27,8 @@ export OS_IDENTITY_API_VERSION=2
 
 START=$(date "+%s")
 TIMESTAMP=$(date --iso | tr -d -)
-{%- if restic_activator != "systemd" -%} >  BACKUPPATH="{{restic_backup_path}}" {%- endif %}
-RESTIC_BACKUP_LOG_PATH="{{backup_logpath}}"
+{% if restic_activator != "systemd" -%} >  RESTIC_BACKUP_LOG_PATH="{{backup_logpath}}" {%- endif %}
+BACKUPPATH="{{restic_backup_path}}"
 mkdir -p "{{restic_backup_path}}"
 mkdir -p "{{backup_logpath}}"
 chown -R root:root  "{{restic_backup_path}}"
