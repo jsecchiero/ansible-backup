@@ -2,6 +2,8 @@
 Description=Backup system wit Restic
 
 [Service]
+User=root
+Group=root
 Type=simple
 ExecStart=/bin/bash {{ duplicity_download_path }}restic/{{utility.lower()}}_backup.sh 
 

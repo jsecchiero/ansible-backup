@@ -69,6 +69,8 @@ else
 
 fi
 
+"{{restic_binary_path}}/restic" forget {% for flag, flag_value in restic_forget_time.items() %}{{ flag }} {{ flag_value }} {% endfor -%}
+
 ## Elenca i backup eseguiti.
 #restic -r swift:${_CONTAINER}:/home snapshots
 
