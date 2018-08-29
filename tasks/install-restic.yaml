@@ -1,0 +1,47 @@
+
+- name: create restic script path in "{{ restic_download_path }}/restic"
+  file:
+    path: "{{ restic_install_path }}/restic"
+    state: directory
+
+- name: create restic script path in "{{ restic_download_path }}"
+  file:
+    path: "{{ restic_download_path }}"
+    state: directory
+
+- name: create restic path for binary in "{{ restic_binary_path }}"
+  file:
+    path: "{{ restic_binary_path }}"
+    state: directory
+
+- name: create resti script path in "{{ restic_install_path }}/restic"
+  file:
+    path: "{{ restic_install_path }}/restic"
+    state: directory
+
+- name: create resti script path in "{{ restic_binary_path }}"
+  file:
+    path: "{{ restic_binary_path}}"
+    state: directory
+
+- name: Install bz2
+  package:
+    name: bzip2
+    state: present
+
+- name: Download client binary
+  get_url:
+    url: '{{ restic_url_install }}'
+    dest: '{{ restic_download_path }}/restic.bz2'
+    force: True
+  register: get_url_restic
+
+- name: Decompress the binary
+  shell: "bzip2 -dc {{ restic_download_path }}/restic.bz2 > {{ restic_binary_path}}/restic"
+
+- name: Ensure permissions are correct
+  file:
+    path: '{{ restic_binary_path}}/restic'
+    mode: '0755'
+    owner: 'root'
+    group: 'root'

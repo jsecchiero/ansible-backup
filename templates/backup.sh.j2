@@ -13,6 +13,7 @@ source /usr/local/restic/customer-data.sh
 ## Viceversa i backup non saranno ripristinabili. 
 
 export RESTIC_PASSWORD="{{restic_repository_password}}"
+export XDG_CACHE_HOME="{{restic_XDG_CACHE_HOME}}"
 
 export OS_ENDPOINT_TYPE=publicURL
 export OS_INTERFACE=public
@@ -26,7 +27,7 @@ export OS_IDENTITY_API_VERSION=2
 
 START=$(date "+%s")
 TIMESTAMP=$(date --iso | tr -d -)
-BACKUPPATH="{{restic_backup_path}}"
+{%- if restic_activator != "systemd" -%} >  BACKUPPATH="{{restic_backup_path}}" {%- endif %}
 RESTIC_BACKUP_LOG_PATH="{{backup_logpath}}"
 mkdir -p "{{restic_backup_path}}"
 mkdir -p "{{backup_logpath}}"
@@ -39,14 +40,16 @@ function prepare_bk {
 
 if prepare_bk; 
 then
-    if "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}"  > $RESTIC_BACKUP_LOG_PATH/backup.log; 
+    if "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
+
+
     then
         END=$(/usr/local/bin/restic snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
 
         RUNTIME=$(( ${END} - ${START} ))
 
         curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
-	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
+	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=1,elapsed=${RUNTIME}"
 
     else
         # Invia notifica se fallisce l'upload su swift.
@@ -55,7 +58,7 @@ then
     fi
 
 else
-    "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}"  > $RESTIC_BACKUP_LOG_PATH/backup.log; 
+    "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
     END=$("{{restic_binary_path}}/restic" snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
 
     RUNTIME=$(( ${END} - ${START} ))

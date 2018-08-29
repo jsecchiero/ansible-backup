@@ -1,0 +1,150 @@
+- name: Install list of packages
+  package: 
+    name: "{{item}}"
+    state: installed
+  with_items: "{{ restic_additional_pakage_nead }}"
+
+
+
+- name: Create restic cache folder
+  file:
+    path: "{{restic_XDG_CACHE_HOME}}"
+    state: directory
+    mode: 0755
+
+- name: esnure that cron is installed
+  package:
+    name: cron
+    state: present
+
+- name: esnure that logrotate is installed
+  apt: name=logrotate state=present
+
+- name: add crontab for "{{restic_service_to_backup}}"
+  cron:
+    user: "{{item.value.user}}"
+    name: "{{item.value.name}}"
+    hour: "{{ item.value.hour }}"
+    minute: "{{ item.value.minute }}"
+    weekday: "{{ item.value.weekday }}"
+    job: "{{item.value.job}}"
+  with_dict: "{{ restic_cron | default({}) }}"
+  when: 
+    - restic
+    - restic_activator == "cron"
+- name: Install log rotate configuration
+  template:
+    src: "files/logrotate-backup-ubuntu"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: 
+    - ansible_os_family == "Debian"
+    - restic_activator == "systemd"
+
+- name: Install log rotate configuration
+  template:
+    src: "files/logrotate-backup-centos"
+    dest: "/etc/logrotate.d/backup"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: 
+    - ansible_os_family == "RedHat"
+    - restic_activator == "systemd"
+
+- name: install restic systemd backup unit
+  block:
+    - name: create systemd service unit
+      template:
+        src: backup.service.j2
+        dest: /etc/systemd/system/backup-{{utility.lower()}}.service
+        owner: root
+        group: root
+        mode: 0644
+  when: 
+    - restic_activator == "systemd"
+
+- name: install restic systemd backup timer
+  block:
+    - name: create systemd timer
+      template:
+        src: backup.timer.j2
+        dest: /etc/systemd/system/backup-{{utility.lower()}}.timer
+        owner: root
+        group: root
+        mode: 0644
+    when: 
+    - restic_activator == "systemd"
+
+- name: Start "backup-{{utility.lower()}}.timer"
+  service:
+    name: "backup-{{utility.lower()}}.service"
+    daemon_reload: yes
+    enabled: yes
+    state: started
+
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                    C O P Y   B A C K U P S C R I T P                       |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+ 
+- name: add customer data
+  template:
+    src: "templates/customer-data.sh.j2"
+    dest: "{{ duplicity_download_path }}restic/customer-data.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+
+- name: check if repo exist
+  shell: |
+    export OS_AUTH_URL="{{os_api}}"
+    export OS_REGION_NAME="{{os_region}}"
+    export OS_TENANT_IDo="{{os_project_id}}"
+    export OS_TENANT_NAME="{{os_project}}"
+    export OS_USERNAME="{{os_user}}"
+    export OS_PASSWORD="{{os_password}}"
+    export RESTIC_PASSWORD="{{restic_repository_password}}"
+    export RESTIC_REPOSITORY="{{restic_repository}}"
+    "{{restic_binary_path}}/restic" snapshots
+  register: result
+  ignore_errors: True
+- name: debug 
+  debug:
+    var: result.stderr
+
+- name: create restic repository
+  shell: |
+    export OS_AUTH_URL="{{os_api}}"
+    export OS_REGION_NAME="{{os_region}}"
+    export OS_TENANT_IDo="{{os_project_id}}"
+    export OS_TENANT_NAME="{{os_project}}"
+    export OS_USERNAME="{{os_user}}"
+    export OS_PASSWORD="{{os_password}}"
+    export RESTIC_PASSWORD="{{restic_repository_password}}"
+    export RESTIC_REPOSITORY="{{restic_repository}}"
+    "{{restic_binary_path}}/restic" init
+  when: 
+    - restic_setup_repository
+    - "'Is there a repository at the following location?' in result.stderr"
+
+- name: add restic backup-file file scripts
+  template:
+    src: "templates/backup.sh.j2"
+    dest: "{{ duplicity_download_path }}restic/{{restic_service_to_backup | lower}}_backup.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+
+- name: add check script
+  template:
+    src: "templates/check.sh.j2"
+    dest: "{{ duplicity_download_path }}restic/check.sh"
+    owner: "root"
+    group: "root"
+    mode: "0700"
+  when: file
+

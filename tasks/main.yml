@@ -19,14 +19,8 @@
   when: duplicity
 
 - block:
-
-    - name: dbug
-      debug:
-        var: restic_cron
-
     - name: instal Restic
       import_tasks: install-restic.yaml
-    
     - name: instal scripts
       include: install-restic-script.yml
   when: restic

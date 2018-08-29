@@ -89,13 +89,25 @@ restic_cron:
     day: "*"
     month: "*"
     weekday: "*"
-    job: "{{ duplicity_download_path }}restic/backup.sh"
+    job: "{{ duplicity_download_path }}restic/{{restic_service_to_backup | lower}}_backup.sh"
+restic_start_backup_time: "*-*-* 04:35:00"
 restic_additional_pakage_nead:
   - ntp
-
+# cron systemd
+restic_activator: systemd
 
 # backup for mysql multidatabase
-#restic_backup_script: |
+restic_backup_script: |
+  echo "start backup at {{restic_backup_path}}"
+restic_XDG_CACHE_HOME: /var/backups/restic_cache
+
+        
+#+----------------------------------------------------------------------------+
+#|                                                                            |
+#|                  example for mysql wit mysql dump                          |
+#|                                                                            |
+#+----------------------------------------------------------------------------+
+#
 #  _DATABASES=$(mysql -e "SHOW DATABASES;" | grep -vE "(Database|mysql|performance_schema|information_schema|sys)")
 #  _OPTIONS="--opt"
 #  
