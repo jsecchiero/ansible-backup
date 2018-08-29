@@ -90,7 +90,7 @@ restic_cron:
     month: "*"
     weekday: "*"
     job: "{{ duplicity_download_path }}restic/{{restic_service_to_backup | lower}}_backup.sh"
-restic_start_backup_time: "*-*-* 04:35:00"
+restic_start_backup_time: "*-*-* 04:40:00"
 restic_additional_pakage_nead:
   - ntp
 # cron systemd

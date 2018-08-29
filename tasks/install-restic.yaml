@@ -14,15 +14,15 @@
     path: "{{ restic_binary_path }}"
     state: directory
 
-- name: create resti script path in "{{ restic_install_path }}/restic"
+- name: create restic script path in "{{ restic_install_path }}/restic"
   file:
     path: "{{ restic_install_path }}/restic"
     state: directory
-
-- name: create resti script path in "{{ restic_binary_path }}"
-  file:
-    path: "{{ restic_binary_path}}"
-    state: directory
+#
+#- name: create resti script path in "{{ restic_binary_path }}"
+#  file:
+#    path: "{{ restic_binary_path}}"
+#    state: directory
 
 - name: Install bz2
   package:

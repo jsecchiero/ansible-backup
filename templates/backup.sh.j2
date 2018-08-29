@@ -48,12 +48,12 @@ then
 
         RUNTIME=$(( ${END} - ${START} ))
 
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
+        curl -s -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
 	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=1,elapsed=${RUNTIME}"
 
     else
         # Invia notifica se fallisce l'upload su swift.
-        curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
+        curl -s -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
 	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
     fi
 

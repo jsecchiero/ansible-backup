@@ -4,86 +4,77 @@
     state: installed
   with_items: "{{ restic_additional_pakage_nead }}"
 
-
-
-- name: Create restic cache folder
-  file:
-    path: "{{restic_XDG_CACHE_HOME}}"
-    state: directory
-    mode: 0755
-
-- name: esnure that cron is installed
-  package:
-    name: cron
-    state: present
-
-- name: esnure that logrotate is installed
-  apt: name=logrotate state=present
-
-- name: add crontab for "{{restic_service_to_backup}}"
-  cron:
-    user: "{{item.value.user}}"
-    name: "{{item.value.name}}"
-    hour: "{{ item.value.hour }}"
-    minute: "{{ item.value.minute }}"
-    weekday: "{{ item.value.weekday }}"
-    job: "{{item.value.job}}"
-  with_dict: "{{ restic_cron | default({}) }}"
-  when: 
-    - restic
-    - restic_activator == "cron"
-- name: Install log rotate configuration
-  template:
-    src: "files/logrotate-backup-ubuntu"
-    dest: "/etc/logrotate.d/backup"
-    owner: "root"
-    group: "root"
-    mode: "0700"
-  when: 
-    - ansible_os_family == "Debian"
-    - restic_activator == "systemd"
-
-- name: Install log rotate configuration
-  template:
-    src: "files/logrotate-backup-centos"
-    dest: "/etc/logrotate.d/backup"
-    owner: "root"
-    group: "root"
-    mode: "0700"
-  when: 
-    - ansible_os_family == "RedHat"
-    - restic_activator == "systemd"
-
-- name: install restic systemd backup unit
-  block:
-    - name: create systemd service unit
-      template:
-        src: backup.service.j2
-        dest: /etc/systemd/system/backup-{{utility.lower()}}.service
-        owner: root
-        group: root
-        mode: 0644
-  when: 
-    - restic_activator == "systemd"
-
-- name: install restic systemd backup timer
-  block:
-    - name: create systemd timer
-      template:
-        src: backup.timer.j2
-        dest: /etc/systemd/system/backup-{{utility.lower()}}.timer
-        owner: root
-        group: root
-        mode: 0644
+- block:
+  - name: Create restic cache folder
+    file:
+      path: "{{restic_XDG_CACHE_HOME}}"
+      state: directory
+      mode: 0755
+  
+  - name: esnure that cron is installed
+    package:
+      name: cron
+      state: present
+  
+  - name: esnure that logrotate is installed
+    apt: name=logrotate state=present
+  
+  - name: add crontab for "{{restic_service_to_backup}}"
+    cron:
+      user: "{{item.value.user}}"
+      name: "{{item.value.name}}"
+      hour: "{{ item.value.hour }}"
+      minute: "{{ item.value.minute }}"
+      weekday: "{{ item.value.weekday }}"
+      job: "{{item.value.job}}"
+    with_dict: "{{ restic_cron | default({}) }}"
     when: 
+      - restic
+  - name: Install log rotate configuration
+    template:
+      src: "files/logrotate-backup-ubuntu"
+      dest: "/etc/logrotate.d/backup"
+      owner: "root"
+      group: "root"
+      mode: "0700"
+    when: 
+      - ansible_os_family == "Debian"
+  
+  - name: Install log rotate configuration
+    template:
+      src: "files/logrotate-backup-centos"
+      dest: "/etc/logrotate.d/backup"
+      owner: "root"
+      group: "root"
+      mode: "0700"
+    when: 
+      - ansible_os_family == "RedHat"
+  when:
+    - restic_activator == "cron"
+ 
+- block:
+  - name: create systemd service unit
+    template:
+      src: backup.service.j2
+      dest: /etc/systemd/system/backup-{{utility.lower()}}.service
+      owner: root
+      group: root
+      mode: 0644
+  - name: create systemd timer
+    template:
+      src: backup.timer.j2
+      dest: /etc/systemd/system/backup-{{utility.lower()}}.timer
+      owner: root
+      group: root
+      mode: 0644
+  - name: Start and Enable "backup-{{utility.lower()}}.timer" 
+    systemd:
+      name: "backup-{{utility.lower()}}.timer"
+      daemon_reload: yes
+      enabled: yes
+      state: started
+  when: 
     - restic_activator == "systemd"
-
-- name: Start "backup-{{utility.lower()}}.timer"
-  service:
-    name: "backup-{{utility.lower()}}.service"
-    daemon_reload: yes
-    enabled: yes
-    state: started
 
 #+----------------------------------------------------------------------------+
 #|                                                                            |
