@@ -100,6 +100,12 @@ restic_activator: systemd
 restic_backup_script: |
   echo "start backup at {{restic_backup_path}}"
 restic_XDG_CACHE_HOME: /var/backups/restic_cache
+restic_forget_time:
+  '--keep-daily': '14'
+  '--keep-weekly': '6'
+  '--keep-monthly': '8'
+  '--keep-yearly': '5'
+  '--prune': ''
 
         
 #+----------------------------------------------------------------------------+

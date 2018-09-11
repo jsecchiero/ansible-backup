@@ -22,5 +22,6 @@
         msg: "{{os_api}}"
 - name: run global  
   hosts: all
+  serial: 1
   roles:
     - {role: ansible-backup}
