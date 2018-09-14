@@ -31,7 +31,6 @@ TIMESTAMP=$(date --iso | tr -d -)
 BACKUPPATH="{{restic_backup_path}}"
 mkdir -p "{{restic_backup_path}}"
 mkdir -p "{{backup_logpath}}"
-chown -R root:root  "{{restic_backup_path}}"
 
 
 function prepare_bk {
