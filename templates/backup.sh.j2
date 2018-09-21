@@ -28,10 +28,13 @@ export OS_IDENTITY_API_VERSION=2
 START=$(date "+%s")
 TIMESTAMP=$(date --iso | tr -d -)
 {% if restic_activator != "systemd" -%} >  RESTIC_BACKUP_LOG_PATH="{{backup_logpath}}" {%- endif %}
+# set check variable to 1
+I=1
 BACKUPPATH="{{restic_backup_path}}"
 mkdir -p "{{restic_backup_path}}"
 mkdir -p "{{backup_logpath}}"
 
+# Use I to check the loop
 
 function prepare_bk {
   {{restic_backup_script}}
@@ -43,32 +46,31 @@ then
 
 
     then
-        END=$(/usr/local/bin/restic snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
-
-        RUNTIME=$(( ${END} - ${START} ))
-
-        curl -s -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
-	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=1,elapsed=${RUNTIME}"
-
+	sleep 5
+	S=$[$S+1]
     else
-        # Invia notifica se fallisce l'upload su swift.
-        curl -s -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
-	     "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
+        sleep 5
+	S=500
     fi
 
 else
     "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
-    END=$("{{restic_binary_path}}/restic" snapshots --json | jq '.[-1].time' | cut -d "." -f 1 | date "+%s")
-
-    RUNTIME=$(( ${END} - ${START} ))
-
-    # Invia notifica se fallisce anche un solo dump.
-    curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary \
-	  "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic_{{utility}} status=2,elapsed=${RUNTIME}"
-
+    sleep 5
+    # nel caso la funziona di prepare fallisca esegui ugualmente il backup e poi invia la notifica di fallimento
+    S=500
 fi
 
-"{{restic_binary_path}}/restic" forget {% for flag, flag_value in restic_forget_time.items() %}{{ flag }} {{ flag_value }} {% endfor -%}
+"{{restic_binary_path}}/restic" forget {% for flag, flag_value in restic_forget_time.items() %}{{ flag }} {{ flag_value }} {% endfor %}
+
+sleep 5
+END_TIME=$(date "+%s")
+runtime=$((END_TIME - START))
+if [[ "$I" == "$S" ]]
+then
+    curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic-data status=1,elapsed=$runtime"
+else
+    curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic-data status=2,elapsed=$runtime"
+fi
 
 ## Elenca i backup eseguiti.
 #restic -r swift:${_CONTAINER}:/home snapshots
