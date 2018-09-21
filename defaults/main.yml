@@ -89,7 +89,7 @@ restic_cron:
     day: "*"
     month: "*"
     weekday: "*"
-    job: "{{ duplicity_download_path }}restic/{{utility | lower}}_backup.sh"
+    job: "{{ restic_install_path }}restic/{{utility | lower}}_backup.sh"
 restic_start_backup_time: "*-*-* 04:40:00"
 restic_additional_pakage_nead:
   - ntp

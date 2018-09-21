@@ -85,7 +85,7 @@
 - name: add customer data
   template:
     src: "templates/customer-data.sh.j2"
-    dest: "{{ duplicity_download_path }}restic/customer-data.sh"
+    dest: "{{ restic_install_path }}/restic/customer-data.sh"
     owner: "root"
     group: "root"
     mode: "0700"
@@ -125,7 +125,7 @@
 - name: add restic backup-file file scripts
   template:
     src: "templates/backup.sh.j2"
-    dest: "{{ duplicity_download_path }}restic/{{utility | lower}}_backup.sh"
+    dest: "{{ restic_install_path }}/restic/{{utility | lower}}_backup.sh"
     owner: "root"
     group: "root"
     mode: "0700"
@@ -133,7 +133,7 @@
 - name: add check script
   template:
     src: "templates/check.sh.j2"
-    dest: "{{ duplicity_download_path }}restic/check.sh"
+    dest: "{{ restic_install_path }}restic/check.sh"
     owner: "root"
     group: "root"
     mode: "0700"
