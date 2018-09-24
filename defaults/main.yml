@@ -112,6 +112,14 @@ restic_functions:
   - forget
   - check
   - prune
+
+# restic hooks
+restic_before_forget_script: ""
+restic_after_forget_script: ""
+restic_before_check_script: ""
+restic_after_check_script: ""
+restic_before_prune_script: ""
+restic_after_prune_script: ""
         
 #+----------------------------------------------------------------------------+
 #|                                                                            |

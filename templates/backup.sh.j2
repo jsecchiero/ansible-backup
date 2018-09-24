@@ -68,6 +68,9 @@ fi
 {% endif %}
 
 {% if 'forget' in restic_functions %}
+
+{{restic_before_forget_script}}
+
 #+-----------------------------------------------------------------------------+
 #|                            Forget                                           |
 #+-----------------------------------------------------------------------------+
@@ -82,9 +85,15 @@ else
     echo restic forget fail
     S=500
 fi
+
+{{restic_after_forget_script}}
+
 {% endif %}
 
 {% if 'check' in restic_functions %}
+
+{{restic_before_check_script}}
+
 #+-----------------------------------------------------------------------------+
 #|                              check                                          |
 #+-----------------------------------------------------------------------------+
@@ -99,9 +108,15 @@ else
     echo restic check fail
     S=500
 fi
+
+{{restic_after_check_script}}
+
 {% endif %}
 
 {% if 'prune' in restic_functions %}
+
+{{restic_before_prune_script}}
+
 #+-----------------------------------------------------------------------------+
 #|                             prune                                           | 
 #+-----------------------------------------------------------------------------+
@@ -116,10 +131,15 @@ else
     echo restic prune fail
     S=500
 fi
+
+{{restic_after_prune_script}}
+
 {% endif %}
 
+{{restic_before_notification_script}}
+
 #+----------------------------------------------------------------------------+
-#|                    Sent BackUp Notificatio                                 |
+#|                    Sent BackUp Notification                                |
 #+----------------------------------------------------------------------------+
 
 
@@ -138,6 +158,8 @@ else
     curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic-data status=2,elapsed=$runtime"
     echo sent fail notification
 fi
+
+{{restic_after_notification_script}}
 
 ## Elenca i backup eseguiti.
 #restic -r swift:${_CONTAINER}:/home snapshots
