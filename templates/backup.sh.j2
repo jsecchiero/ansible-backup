@@ -40,27 +40,92 @@ function prepare_bk {
   {{restic_backup_script}}
 }
 
+{% if 'backup' in restic_functions %}
+#+-----------------------------------------------------------------------------+
+#|                            BackUp                                           |
+#+-----------------------------------------------------------------------------+
 if prepare_bk; 
 then
-    if "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
+    if "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" %} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
 
 
     then
 	sleep 5
+	echo restic backup ok
 	S=$[$S+1]
     else
         sleep 5
+	echo restic backup fail
 	S=500
     fi
 
 else
-    "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
+    "{{restic_binary_path}}/restic" backup "{{restic_backup_path}}" {%- if restic_activator != "systemd" %} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {%- endif %}
     sleep 5
     # nel caso la funziona di prepare fallisca esegui ugualmente il backup e poi invia la notifica di fallimento
     S=500
 fi
+{% endif %}
 
-"{{restic_binary_path}}/restic" forget {% for flag, flag_value in restic_forget_time.items() %}{{ flag }} {{ flag_value }} {% endfor %}
+{% if 'forget' in restic_functions %}
+#+-----------------------------------------------------------------------------+
+#|                            Forget                                           |
+#+-----------------------------------------------------------------------------+
+if "{{restic_binary_path}}/restic" forget {% for flag, flag_value in restic_forget_time.items() %}{{ flag }} {{ flag_value }} {% endfor %} {%- if restic_activator != "systemd" -%} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {% endif %}
+
+then
+    sleep 5
+    echo restic forget ok 
+    S=$[$S+1]
+else
+    sleep 5
+    echo restic forget fail
+    S=500
+fi
+{% endif %}
+
+{% if 'check' in restic_functions %}
+#+-----------------------------------------------------------------------------+
+#|                              check                                          |
+#+-----------------------------------------------------------------------------+
+if "{{restic_binary_path}}/restic" check {%- if restic_activator != "systemd" %} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {% endif %}
+
+then
+    sleep 5
+    echo restic check ok
+    S=$[$S+1]
+else
+    sleep 5
+    echo restic check fail
+    S=500
+fi
+{% endif %}
+
+{% if 'prune' in restic_functions %}
+#+-----------------------------------------------------------------------------+
+#|                             prune                                           | 
+#+-----------------------------------------------------------------------------+
+if "{{restic_binary_path}}/restic" prune {%- if restic_activator != "systemd" %} >  $RESTIC_BACKUP_LOG_PATH/backup.log; {% endif %}
+
+then
+    sleep 5
+    echo restic prune ok
+    S=$[$S+1]
+else
+    sleep 5
+    echo restic prune fail
+    S=500
+fi
+{% endif %}
+
+#+----------------------------------------------------------------------------+
+#|                    Sent BackUp Notificatio                                 |
+#+----------------------------------------------------------------------------+
+
+
+# get container dimension
+
+curl -X POST $OS_AUTH_URL/tokens -H "Content-Type: application/json" -H "User-Agent: python-keystoneclient" -d '{"auth": {"tenantName": "agreco@enter.it", "passwordCredentials": {"username": "agreco@enter.it", "password": "#aaa82962003"}}}' | jq -r .access.token.id
 
 sleep 5
 END_TIME=$(date "+%s")
@@ -68,8 +133,10 @@ runtime=$((END_TIME - START))
 if [[ "$I" == "$S" ]]
 then
     curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic-data status=1,elapsed=$runtime"
+    echo sent ok notification
 else
     curl -i -XPOST "http://{{ influxDB_url }}:{{ influxDB_port }}/write?db={{ influxDB_DatabaseName }}&u={{ influxDB_Username  }}&p={{ influxDB_Password }}" --data-binary "backup,customer=$CUSTOMER,host=$HOSTNAME,service_name=restic-data status=2,elapsed=$runtime"
+    echo sent fail notification
 fi
 
 ## Elenca i backup eseguiti.

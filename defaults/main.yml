@@ -105,8 +105,13 @@ restic_forget_time:
   '--keep-weekly': '6'
   '--keep-monthly': '8'
   '--keep-yearly': '5'
-  '--prune': ''
 
+# backup forget check prune
+restic_functions:
+  - backup
+  - forget
+  - check
+  - prune
         
 #+----------------------------------------------------------------------------+
 #|                                                                            |
